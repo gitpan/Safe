@@ -3,9 +3,8 @@ package Safe;
 use 5.003_11;
 use strict;
 use Scalar::Util qw(reftype);
-use B qw(sub_generation);
 
-$Safe::VERSION = "2.25";
+$Safe::VERSION = "2.26";
 
 # *** Don't declare any lexicals above this point ***
 #
@@ -32,6 +31,18 @@ BEGIN { eval q{
     use Carp::Heavy;
 } }
 
+use B ();
+BEGIN {
+    no strict 'refs';
+    if (defined &B::sub_generation) {
+        *sub_generation = \&B::sub_generation;
+    }
+    else {
+        # fake sub generation changing for perls < 5.8.9
+        my $sg; *sub_generation = sub { ++$sg };
+    }
+}
+
 use Opcode 1.01, qw(
     opset opset_to_ops opmask_add
     empty_opset full_opset invert_opset verify_opset
@@ -55,7 +66,7 @@ require utf8;
 # and also loads the ToFold SWASH.
 # (Swashes are cached internally by perl in PL_utf8_* variables
 # independent of being inside/outside of Safe. So once loaded they can be)
-do { my $unicode = pack('U',0xC4).'1a'; $unicode =~ /\xE4/i; };
+do { my $a = pack('U',0xC4); my $b = chr 0xE4; utf8::upgrade $b; $a =~ /$b/i };
 # now we can safely include utf8::SWASHNEW in $default_share defined below.
 
 my $default_root  = 0;
