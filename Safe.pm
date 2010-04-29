@@ -4,7 +4,7 @@ use 5.003_11;
 use strict;
 use Scalar::Util qw(reftype);
 
-$Safe::VERSION = "2.26";
+$Safe::VERSION = "2.27";
 
 # *** Don't declare any lexicals above this point ***
 #
@@ -131,6 +131,7 @@ my $default_share = [qw[
     &version::vxs::declare
     &version::vxs::qv
     &version::vxs::_VERSION
+    &version::vxs::stringify
     &version::vxs::new
     &version::vxs::parse
 ]), ($] >= 5.011 && qw[
@@ -357,6 +358,7 @@ sub reval {
                ?        Opcode::_safe_call_sv($root, $obj->{Mask}, $evalsub)
                : scalar Opcode::_safe_call_sv($root, $obj->{Mask}, $evalsub);
     _clean_stash($root.'::') if $sg != sub_generation();
+    $obj->wrap_code_refs_within(@subret);
     return (wantarray) ? @subret : $subret[0];
 }
 
@@ -435,6 +437,7 @@ sub rdo {
                ?        Opcode::_safe_call_sv($root, $obj->{Mask}, $evalsub)
                : scalar Opcode::_safe_call_sv($root, $obj->{Mask}, $evalsub);
     _clean_stash($root.'::') if $sg != sub_generation();
+    $obj->wrap_code_refs_within(@subret);
     return (wantarray) ? @subret : $subret[0];
 }
 
@@ -648,9 +651,9 @@ expression evaluated, or a return statement may be used, just as with
 subroutines and B<eval()>. The context (list or scalar) is determined
 by the caller as usual.
 
-This behaviour differs from the beta distribution of the Safe extension
-where earlier versions of perl made it hard to mimic the return
-behaviour of the eval() command and the context was always scalar.
+If the return value of reval() is (or contains) any code reference,
+those code references are wrapped to be themselves executed always
+in the compartment. See L</wrap_code_refs_within>.
 
 The formerly undocumented STRICT argument sets strictness: if true
 'use strict;' is used, otherwise it uses 'no strict;'. B<Note>: if
