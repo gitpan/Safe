@@ -40,7 +40,7 @@ while (<$fh>) {
 }
 close $fh;
 
-plan(tests => scalar @op + 1);
+plan(tests => scalar @op + 3);
 
 sub testop {
     my ($op, $opname, $code) = @_;
@@ -73,6 +73,24 @@ foreach (@op) {
 	),
 	qr/Unbalanced/,
 	'No Unbalanced warnings when disallowing ops';
+    unlike
+	runperl(
+	    switches => [ '-MSafe', '-w' ],
+	    prog     => 'Safe->new->reval(q(use strict), 1)',
+	    stderr   => 1,
+	),
+	qr/Unbalanced/,
+	'No Unbalanced warnings when disallowing ops';
+    unlike
+	runperl(
+	    switches => [ '-MSafe', '-w' ],
+	    prog     => 'Safe->new->reval('
+			. 'q(BEGIN{$^H{foo}=bar};use strict), 0'
+			.')',
+	    stderr   => 1,
+	),
+	qr/Unbalanced/,
+	'No Unbalanced warnings when disallowing ops with %^H set';
 }
 
 # things that begin with SKIP are skipped, for various reasons (notably
